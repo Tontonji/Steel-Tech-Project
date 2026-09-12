@@ -1,0 +1,20 @@
+# Python
+.env
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Steel BOQ MVP runtime output (local research logs + Excel exports)
+steel_boq_mvp/logs/*
+!steel_boq_mvp/logs/.gitkeep
+steel_boq_mvp/*.xlsx
+
+# Jekyll build output
+_site/
+.jekyll-cache/
+
+# OS
+Thumbs.db
+.DS_Store

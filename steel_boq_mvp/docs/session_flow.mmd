@@ -1,0 +1,12 @@
+stateDiagram-v2
+    [*] --> NoFile
+    NoFile --> Loaded: upload (new file_sig)
+    Loaded --> Loaded: toggle page checkboxes
+    Loaded --> Extracting: click Extract
+    Extracting --> Results: rows parsed
+    Extracting --> Failed: parse / API error
+    Results --> Results: edit cells / download (no API call)
+    Failed --> Extracting: click Extract again
+    Results --> Loaded: upload different file
+    Failed --> Loaded: upload different file
+    Loaded --> NoFile: clear uploader

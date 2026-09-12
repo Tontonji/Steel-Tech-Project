@@ -1,0 +1,14 @@
+member_id,section,length_mm,quantity,page,notes_expected
+B1,H-300x150x6.5x9,6000,8,1,
+B2,H-400x200x8x13,7500,4,1,
+B3,H-250x125x6x9,4500,6,1,
+GB-01,H-500x200x10x16,9000,2,1,
+C1,H-300x300x10x15,3600,6,1,
+C2,H-250x250x9x14,3600,4,1,
+CH-1,[200x80x7.5x11,3000,10,1,
+CH-2,[250x90x9x13,,6,1,length missing
+BR-1,L90x90x7,4243,8,1,
+P1,W12x26,4200,3,1,
+B4,H-350x175x7x11,7000,2,2,length from plan dimension
+X1,H-200x100x5.5x8,2800,1,1,faint text
+B5,,6000,2,2,plan only; section not in schedule

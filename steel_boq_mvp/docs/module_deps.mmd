@@ -1,0 +1,13 @@
+flowchart TD
+    app[app.py] --> pdf_utils
+    app --> gemini_client
+    app --> boq_utils
+    app --> research_log
+    research_log --> boq_utils
+    gemini_client --> genai[google-genai SDK]
+    pdf_utils --> pymupdf
+    boq_utils --> pandas --> openpyxl
+    score[score.py] --> pandas
+    make_sample[samples/make_sample.py] --> reportlab
+    tests[tests/] -.fake client.-> gemini_client
+    tests -.AppTest.-> app

@@ -1,0 +1,18 @@
+flowchart LR
+    U([User]) -->|1. upload .pdf| A[app.py]
+    A -->|2. render pages @200-300dpi| P[pdf_utils.py<br/>PyMuPDF]
+    P -->|thumbnails + selected pages PNG| A
+    A -->|3. click Extract| G[gemini_client.py]
+    G -->|images + verbatim prompt| GM[(Gemini API)]
+    GM -->|raw text| G
+    G -->|4. parse JSON| R{parsed OK?}
+    R -->|yes| B[boq_utils.py<br/>DataFrame + unit weight]
+    R -->|no| E[st.error +<br/>raw response shown]
+    B --> D[5. st.data_editor<br/>user corrects AI]
+    D --> X[/6. Download Excel/]
+    G --> L[research_log.py]
+    E --> L
+    L --> J[/logs/*.json/]
+    J -.scored against.-> T[/samples/ground_truth.csv/]
+    T -.-> SC[score.py]
+    J -.-> SC

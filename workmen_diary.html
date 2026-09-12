@@ -1,0 +1,323 @@
+<title>Steel-Tech Diary</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef1ef;
+    --surface: #ffffff;
+    --spine: #c7d1cd;
+    --text: #1e2624;
+    --text-muted: #5c6b67;
+    --accent: #2c6e73;
+    --accent-soft: #dcebe9;
+    --border: #d7ded9;
+    --rule: #b9c4bf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11171a;
+      --surface: #182124;
+      --spine: #2a3538;
+      --text: #e6ece9;
+      --text-muted: #92a29e;
+      --accent: #6fc2c1;
+      --accent-soft: #1e3436;
+      --border: #2a3538;
+      --rule: #35423f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11171a;
+    --surface: #182124;
+    --spine: #2a3538;
+    --text: #e6ece9;
+    --text-muted: #92a29e;
+    --accent: #6fc2c1;
+    --accent-soft: #1e3436;
+    --border: #2a3538;
+    --rule: #35423f;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 64px 32px 96px;
+  }
+
+  header.masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--text);
+    margin-bottom: 8px;
+  }
+  .masthead-title {
+    font-family: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.6rem, 6vw, 3.6rem);
+    letter-spacing: 0.01em;
+    line-height: 0.92;
+    text-wrap: balance;
+  }
+  .masthead-title span {
+    display: block;
+    color: var(--accent);
+  }
+  .masthead-meta {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-align: right;
+    line-height: 1.7;
+    white-space: nowrap;
+  }
+  .masthead-meta strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .scope {
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    padding: 18px 0 40px;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .scope b {
+    display: block;
+    font-family: "Source Serif 4", serif;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 1rem;
+    color: var(--text);
+    margin-top: 3px;
+  }
+
+  .log {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 108px 1fr;
+    gap: 28px;
+    position: relative;
+    padding: 30px 0;
+  }
+  .entry + .entry {
+    border-top: 1px solid var(--border);
+  }
+
+  .date-col {
+    position: relative;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  .date-col .dow {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .date-col .num {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 700;
+    font-size: 2.6rem;
+    line-height: 0.9;
+    color: var(--text);
+  }
+  .date-col .ym {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .date-col::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    right: -14px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .entry-body h2 {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: 0.01em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+
+  .entry-body ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .entry-body li {
+    padding-left: 22px;
+    position: relative;
+  }
+  .entry-body li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-family: "IBM Plex Mono", monospace;
+  }
+  .entry-body ul ul {
+    margin-top: 10px;
+    gap: 8px;
+  }
+  .entry-body ul ul li {
+    font-size: 0.94rem;
+    color: var(--text-muted);
+  }
+  .entry-body ul ul li::before {
+    content: "·";
+  }
+  .entry-body code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.85em;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+  }
+
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 9px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-muted);
+  }
+  .tag.status-open {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .placeholder {
+    padding: 40px 0 0;
+    text-align: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .placeholder::before,
+  .placeholder::after {
+    content: "";
+  }
+
+  footer.colophon {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  @media (max-width: 560px) {
+    .entry { grid-template-columns: 64px 1fr; gap: 16px; }
+    .date-col .num { font-size: 1.9rem; }
+    .masthead { flex-direction: column; align-items: flex-start; }
+    .masthead-meta { text-align: left; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <div class="masthead-title">Steel-Tech<span>Diary</span></div>
+    <div class="masthead-meta">
+      PROJECT&nbsp;&nbsp;<strong>Steel-Tech-Project</strong><br>
+      LOG&nbsp;TYPE&nbsp;&nbsp;<strong>Development &amp; Site Notes</strong><br>
+      MAINTAINER&nbsp;&nbsp;<strong>tonton888</strong>
+    </div>
+  </header>
+
+  <div class="scope">
+    <div>Entries logged<b>1</b></div>
+    <div>Span<b>2026-09-09 →</b></div>
+    <div>Subsystem<b>steel_boq_mvp</b></div>
+  </div>
+
+  <div class="log">
+
+    <div class="entry">
+      <div class="date-col">
+        <div class="dow">Wed</div>
+        <div class="num">09</div>
+        <div class="ym">Sep 2026</div>
+      </div>
+      <div class="entry-body">
+        <h2>Gemini key wired in, first extraction confirmed live</h2>
+        <ul>
+          <li>Set up the Gemini API key: created <code>steel_boq_mvp/.env</code> from <code>.env.example</code> and filled in the real key.</li>
+          <li>Called the Gemini API directly against <code>samples/sample_schedule.pdf</code> — extracted 12 steel members successfully, confirming the key works end to end.</li>
+          <li>Ran the Streamlit app (<code>app.py</code>) and confirmed it responds (HTTP 200) at <code>localhost:8501</code>.</li>
+          <li>
+            Opened a design discussion for a new "3D viewer" feature — a 3D view of the whole structure and its individual members.
+            <ul>
+              <li>Noted the current extraction fields (<code>member_id</code>, <code>section</code>, <code>length_mm</code>, <code>quantity</code>) carry no real spatial position.</li>
+              <li>Leaning toward a Phase 1: schematic auto-layout (not true drawing coordinates), extruding each member's real cross-section as a Plotly 3D mesh.</li>
+              <li>Design not yet signed off — left open.</li>
+            </ul>
+          </li>
+          <li>Started this diary for day-by-day work notes.</li>
+        </ul>
+        <div class="tag-row">
+          <span class="tag">.env</span>
+          <span class="tag">gemini api</span>
+          <span class="tag">streamlit</span>
+          <span class="tag status-open">3d viewer — open</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="placeholder">Next entry appends below when logged</div>
+
+  <footer class="colophon">
+    <span>Steel-Tech-Project — internal working log</span>
+    <span>Source: workmen_diary.md</span>
+  </footer>
+
+</div>
