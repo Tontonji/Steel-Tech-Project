@@ -1,0 +1,450 @@
+<title>Steel BOQ Extractor</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #eef1ef;
+    --surface: #ffffff;
+    --surface-sunken: #e4e9e6;
+    --text: #1e2624;
+    --text-muted: #5c6b67;
+    --accent: #2c6e73;
+    --accent-soft: #dcebe9;
+    --border: #d7ded9;
+    --good: #3f7d4a;
+    --good-soft: #e2f0e3;
+    --warn: #a06a1f;
+    --warn-soft: #f4e8d4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #11171a;
+      --surface: #182124;
+      --surface-sunken: #10171a;
+      --text: #e6ece9;
+      --text-muted: #92a29e;
+      --accent: #6fc2c1;
+      --accent-soft: #1e3436;
+      --border: #2a3538;
+      --good: #7cc389;
+      --good-soft: #1c3123;
+      --warn: #dcaa5c;
+      --warn-soft: #332714;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #11171a;
+    --surface: #182124;
+    --surface-sunken: #10171a;
+    --text: #e6ece9;
+    --text-muted: #92a29e;
+    --accent: #6fc2c1;
+    --accent-soft: #1e3436;
+    --border: #2a3538;
+    --good: #7cc389;
+    --good-soft: #1c3123;
+    --warn: #dcaa5c;
+    --warn-soft: #332714;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .shell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  header.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 0;
+    border-bottom: 2px solid var(--text);
+    margin-bottom: 28px;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .brand-mark {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 700;
+    font-size: 1.7rem;
+    letter-spacing: 0.01em;
+  }
+  .brand-mark span { color: var(--accent); }
+  .brand-sub {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .mockup-flag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--warn);
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+    border-radius: 3px;
+    padding: 5px 10px;
+  }
+
+  h1.page-title {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    margin: 0 0 4px;
+    text-wrap: balance;
+  }
+  p.page-sub {
+    color: var(--text-muted);
+    margin: 0 0 28px;
+    max-width: 62ch;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .upload-panel {
+    padding: 28px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 28px;
+  }
+  @media (max-width: 720px) {
+    .upload-panel { grid-template-columns: 1fr; }
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: 6px;
+    padding: 26px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--surface-sunken);
+  }
+  .dropzone-icon {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dropzone-icon svg { width: 22px; height: 22px; }
+  .dropzone-text .fname {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+  .dropzone-text .fmeta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    justify-content: center;
+  }
+  .option-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.86rem;
+  }
+  .option-row .label { color: var(--text-muted); }
+  .option-row .value { font-family: "IBM Plex Mono", monospace; font-weight: 500; }
+
+  .pages-strip {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .page-thumb {
+    width: 34px;
+    height: 46px;
+    border-radius: 3px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+  }
+  .page-thumb.selected {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .btn {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    border-radius: 5px;
+    padding: 10px 18px;
+    border: 1px solid transparent;
+    cursor: default;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--surface);
+  }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--text);
+  }
+  .btn-row { display: flex; gap: 10px; margin-top: 4px; }
+
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .results-header h2 {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+  }
+  .results-meta {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 720px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+  }
+  .stat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .stat-tile .stat-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .stat-tile .stat-value {
+    font-family: "Big Shoulders Display", sans-serif;
+    font-weight: 700;
+    font-size: 1.9rem;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-tile .stat-unit {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 760px;
+  }
+  thead th {
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-sunken);
+    position: sticky;
+    top: 0;
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: "IBM Plex Mono", monospace; }
+  td.member { font-weight: 600; }
+  td.section { font-family: "IBM Plex Mono", monospace; }
+  td.notes { color: var(--text-muted); font-size: 0.8rem; max-width: 220px; }
+  .cell-flag {
+    color: var(--warn);
+  }
+  .null-val {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  footer.colophon {
+    margin-top: 48px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+</style>
+
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">Steel<span>BOQ</span></div>
+      <div class="brand-sub">extraction console</div>
+    </div>
+    <div class="mockup-flag">Mockup — no live extraction</div>
+  </header>
+
+  <h1 class="page-title">อัปโหลดแบบเหล็ก (PDF) เพื่อสกัด BOQ</h1>
+  <p class="page-sub">รองรับเฉพาะ PDF ที่ export จาก CAD (ข้อความแบบ vector) — แบบสแกนหรือลายมือไม่รองรับ</p>
+
+  <section class="panel upload-panel">
+    <div>
+      <div class="dropzone">
+        <div class="dropzone-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6"/><path d="M9 11h2"/></svg>
+        </div>
+        <div class="dropzone-text">
+          <div class="fname">sample_schedule.pdf</div>
+          <div class="fmeta">3 หน้า &middot; 214 KB &middot; อัปโหลดแล้ว</div>
+        </div>
+      </div>
+      <div class="pages-strip">
+        <div class="page-thumb selected">S-201</div>
+        <div class="page-thumb selected">S-101</div>
+        <div class="page-thumb">S-001</div>
+      </div>
+    </div>
+    <div class="options">
+      <div class="option-row"><span class="label">โมเดล</span><span class="value">gemini-2.5-flash</span></div>
+      <div class="option-row"><span class="label">DPI เรนเดอร์</span><span class="value">220</span></div>
+      <div class="option-row"><span class="label">หน้าที่เลือก</span><span class="value">2 / 3</span></div>
+      <div class="btn-row">
+        <div class="btn btn-primary">Extract</div>
+        <div class="btn btn-secondary">Download Excel</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="results-header">
+    <h2>ผลการสกัดข้อมูล</h2>
+    <span class="results-meta">latency 6.4s &middot; log 20260909_120000.json</span>
+  </section>
+
+  <div class="stat-row">
+    <div class="stat-tile">
+      <div class="stat-label">Distinct members</div>
+      <div class="stat-value">12</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Total quantity</div>
+      <div class="stat-value">60 <span class="stat-unit">pcs</span></div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Total weight (matched rows)</div>
+      <div class="stat-value">18,940 <span class="stat-unit">kg</span></div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Rows needing review</div>
+      <div class="stat-value" style="color:var(--warn)">3</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Member ID</th>
+          <th>Section</th>
+          <th class="num">Length (mm)</th>
+          <th class="num">Qty</th>
+          <th class="num">Unit wt (kg/m)</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="member">B1</td><td class="section">H-300x150x6.5x9</td><td class="num">6,000</td><td class="num">8</td><td class="num">36.7</td><td class="notes">—</td></tr>
+        <tr><td class="member">B2</td><td class="section">H-400x200x8x13</td><td class="num">7,500</td><td class="num">4</td><td class="num">66.7</td><td class="notes">—</td></tr>
+        <tr><td class="member">B3</td><td class="section">H-250x125x6x9</td><td class="num">4,500</td><td class="num">6</td><td class="num">29.5</td><td class="notes">—</td></tr>
+        <tr><td class="member">GB-01</td><td class="section">H-500x200x10x16</td><td class="num">9,000</td><td class="num">2</td><td class="num">100.2</td><td class="notes">GRADE BEAM</td></tr>
+        <tr><td class="member">C1</td><td class="section">H-300x300x10x15</td><td class="num">3,600</td><td class="num">6</td><td class="num">92.4</td><td class="notes">—</td></tr>
+        <tr><td class="member">C2</td><td class="section">H-250x250x9x14</td><td class="num">3,600</td><td class="num">4</td><td class="num">72.4</td><td class="notes">—</td></tr>
+        <tr><td class="member">CH-1</td><td class="section cell-flag">[200x80x7.5x11</td><td class="num">3,000</td><td class="num">10</td><td class="num"><span class="null-val">—</span></td><td class="notes">PURLIN; วงเล็บปิดหาย</td></tr>
+        <tr><td class="member">CH-2</td><td class="section cell-flag">[250x90x9x13</td><td class="num"><span class="null-val">null</span></td><td class="num">6</td><td class="num"><span class="null-val">—</span></td><td class="notes">LENGTH TBC; วงเล็บปิดหาย</td></tr>
+        <tr><td class="member">BR-1</td><td class="section">L90x90x7</td><td class="num">4,243</td><td class="num">8</td><td class="num"><span class="null-val">—</span></td><td class="notes">BRACE</td></tr>
+        <tr><td class="member">P1</td><td class="section">W12x26</td><td class="num">4,200</td><td class="num">3</td><td class="num">38.7</td><td class="notes">IMPERIAL</td></tr>
+        <tr><td class="member">B4</td><td class="section">H-350x175x7x11</td><td class="num"><span class="null-val">null</span></td><td class="num">2</td><td class="num">49.9</td><td class="notes">length 'SEE PLAN'</td></tr>
+        <tr><td class="member">X1</td><td class="section">H-200x100x5.5x8</td><td class="num">2,800</td><td class="num">1</td><td class="num">21.9</td><td class="notes">แถวตัวอักษรเล็กจางในต้นฉบับ</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="toolbar">
+    <span class="results-meta">แก้ไขค่าในตารางได้โดยตรงก่อนดาวน์โหลด &middot; ค่า null ต้องกรอกเองจากการอ่านแบบ</span>
+  </div>
+
+  <footer class="colophon">
+    <span>steel_boq_mvp — mockup, ข้อมูลตัวอย่างจาก samples/sample_schedule.pdf</span>
+    <span>ใช้งานจริงที่ localhost:8501</span>
+  </footer>
+
+</div>
