@@ -1,5 +1,10 @@
-# Python
+# Environment and secrets
 .env
+.env.*
+*.env
+*.env.local
+node_modules/
+.next/
 venv/
 .venv/
 __pycache__/

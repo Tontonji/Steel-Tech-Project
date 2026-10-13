@@ -32,7 +32,7 @@ Tip: if this folder lives in OneDrive, a venv outside it is faster, e.g.
 | Key | Purpose |
 |---|---|
 | `GEMINI_API_KEY` | required; never commit it |
-| `GEMINI_MODEL` | optional, default `gemini-2.5-flash` (try `gemini-2.5-pro` for harder sheets) |
+| `GEMINI_MODEL` | optional, default `gemini-3.8-flash` (try `gemini-2.5-pro` for harder sheets) |
 
 ## How it works
 

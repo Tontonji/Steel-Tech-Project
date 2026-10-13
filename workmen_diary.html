@@ -273,9 +273,9 @@
   </header>
 
   <div class="scope">
-    <div>Entries logged<b>1</b></div>
-    <div>Span<b>2026-09-09 →</b></div>
-    <div>Subsystem<b>steel_boq_mvp</b></div>
+    <div>Entries logged<b>2</b></div>
+    <div>Span<b>2026-09-09 → 2026-09-28</b></div>
+    <div>Subsystem<b>steel-boq-app + steel_boq_mvp</b></div>
   </div>
 
   <div class="log">
@@ -307,6 +307,56 @@
           <span class="tag">gemini api</span>
           <span class="tag">streamlit</span>
           <span class="tag status-open">3d viewer — open</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="entry">
+      <div class="date-col">
+        <div class="dow">Mon</div>
+        <div class="num">28</div>
+        <div class="ym">Sep 2026</div>
+      </div>
+      <div class="entry-body">
+        <h2>Next.js Web App Redesign, Gemini 3.8 Flash & Live Vision Extraction</h2>
+        <ul>
+          <li>
+            <strong>Web App UI/UX Redesign (<code>steel-boq-app</code>):</strong>
+            <ul>
+              <li>Rebuilt modern landing page with Dark Glow, dynamic Warp canvas shaders (<code>@paper-design/shaders-react</code>), and responsive layout.</li>
+              <li>Full overhaul of the <code>/extractor</code> interactive workspace matching the homepage aesthetic.</li>
+              <li>Interactive drag & drop PDF zone with custom DPI slider (100–300) and page selection toggle pills.</li>
+              <li>macOS-style BOQ Table with live inline editable cells (Member ID, Section, Length, Qty, Unit Wt, Notes) and instant CSV export.</li>
+              <li>Real-time stat tiles: distinct members, total pieces, calculated steel weight (kg / tons), and review alerts for incomplete sections.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Upgraded Model to Gemini 3.8 Flash:</strong>
+            <ul>
+              <li>Updated <code>DEFAULT_MODEL = "gemini-3.8-flash"</code> in <code>gemini_client.py</code>, <code>.env.example</code>, and project documentation.</li>
+              <li>Updated all badges, technical specifications, and UI chips across the app to Gemini 3.8 Flash.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>End-to-End Gemini Vision API Integration:</strong>
+            <ul>
+              <li>Implemented <code>app/api/extract/route.ts</code> to parse PDF to base64 inlineData, issue zero-temp JSON extraction with fallback logic.</li>
+              <li>Built <code>lib/boq-calc.ts</code> providing pure TypeScript unit-weight calculation formulas for H, C, and W steel profiles.</li>
+              <li>Added in-browser Gemini API Key configuration saved safely in <code>localStorage</code> with masked input.</li>
+              <li>Enhanced <code>.gitignore</code> to safeguard <code>.env*</code> files and API keys from repository commits.</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Bug Fixes & Routing Corrections:</strong>
+            Fixed Navbar JSX syntax error and updated all GitHub source links to point directly to <code>https://github.com/Tontonji/Steel-Tech-Project</code>.
+          </li>
+        </ul>
+        <div class="tag-row">
+          <span class="tag">next.js 16</span>
+          <span class="tag">gemini 3.8 flash</span>
+          <span class="tag">tailwind v4</span>
+          <span class="tag">boq extractor</span>
+          <span class="tag">vision api</span>
         </div>
       </div>
     </div>

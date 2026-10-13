@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 
 from dotenv import load_dotenv
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 # Verbatim from the research spec. Do not paraphrase.
 PROMPT = """You are reading a structural steel drawing (framing plan or member schedule).
