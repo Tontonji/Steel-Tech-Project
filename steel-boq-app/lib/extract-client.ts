@@ -1,4 +1,4 @@
-import { calculateUnitWeight } from "@/lib/boq-calc";
+import { calculateUnitWeight, inferMissingLengths } from "@/lib/boq-calc";
 import { PDFDocument } from "pdf-lib";
 
 export interface PageAnalysis {
@@ -33,17 +33,23 @@ YOUR GOALS:
      * IS IT NON-STRUCTURAL? (is_structural = false):
        Examples: Architectural floor plans (แปลนพื้นสถาปัตย์), Elevations (รูปด้าน), Building sections (รูปตัดสถาปัตย์), Site/Location plan (ผังบริเวณ), Door/Window schedules (ตารางประตูหน้าต่าง), Electrical/Lighting/Power plans (แบบไฟฟ้า), Sanitary/Plumbing plans (สุขาภิบาล, ท่อน้ำ), Cover sheets, Perspectives/3D.
 
-2. DETECT & EXTRACT STRUCTURAL STEEL MEMBERS ONLY:
-   - Extract distinct structural steel members (H-Beam, I-Beam, Wide-Flange, Channel [ / C-Purlin, Lip Channel, Equal Angle L, Steel Tubes/Pipes, Sag Rods, Tie Rods, Base Plates, Gusset Plates) identified on the STRUCTURAL pages or member schedules.
-   - DO NOT extract non-structural architectural elements (timber, aluminium door frames, plumbing pipes, glass).
+2. DETECT & EXTRACT STRUCTURAL STEEL MEMBERS:
+   - Extract structural steel members (H-Beam, I-Beam, Wide-Flange, Channel [, C-Purlin, Lip Channel, Angle L, Square/Rectangular Steel Tubes, Round Pipes, Sag Rods, Tie Rods, Anchor Bolts, Base Plates, Stiffener Plates, Truss chords & webs).
    - For each member:
-     * member_id: Tag/Mark shown on the drawing (e.g. B1, B2, 2B1, C1, RB1, P1, TR-1, etc.)
-     * section: Standard steel section designation (e.g. H-300x150x6.5x9, 2C-150x50x20x3.2, L-50x50x4, Pipe 100 dia, Plate 10mm)
-     * length_mm: Length in millimeters if dimensioned or derived from grid lines; null if not indicated
+     * member_id: Tag/Mark shown on the drawing (e.g. B1, B2, Column H-Beam, Base Plate, Stiffener Plate, TRUSS 1 Top Chord, TRUSS 2 Members, Anchor Bolt)
+     * section: Section designation or dimension (e.g. H-200x200x8x12, Square Tube 2"x4"x2mm, Plate 25mm, Plate 12mm, Dia 25mm, Steel 90mm, 7.76 kg/m)
+     * length_mm: Length in millimeters.
+       *** CRITICAL LENGTH BORROWING RULE ***:
+       DO NOT leave length_mm as null if it can be inferred or borrowed from confident/known members!
+       - Columns (e.g. Column H-Beam): derive from storey elevation height (e.g. 3,000–6,000 mm) or bay length.
+       - Stiffener Plates: derive length from the column/beam flange/web width it attaches to (e.g. for H-200x200, use 200 mm) or Base Plate dimension (e.g. 300 mm).
+       - Truss Members: borrow length from similar/adjacent truss chords or spans (e.g. if TRUSS 1 is 28,000 mm, assume 28,000 mm for TRUSS 2 chord).
+       - If any dimensions or lengths are close or similar, ASSUME that value and note "(ยืมความยาว/มิติจาก...)" in notes.
      * quantity: Count of this member instance
-     * source_page: The 1-based page number where this member or its schedule was found
-     * sheet_no: Drawing sheet number (e.g. S-01, S-02, ST-05) if visible in title block
-     * notes: Brief context (e.g. "From Roof Framing Plan", "Found in beam schedule", or grid coordinate)
+     * unit_weight_kg_m: Weight in kg/m if indicated directly on the drawing (e.g. 7.76 kg/m -> 7.76, 12.1 kg/m -> 12.1) or leave null to let system calculate
+     * source_page: The 1-based page number where this member was found
+     * sheet_no: Drawing sheet number (e.g. S-01, S-02) if visible
+     * notes: Context, including any borrowed length annotations (e.g. "ยืมความยาวจาก...", "Main column from elevation")
 
 3. OUTPUT FORMAT:
 Return a JSON object with this EXACT schema:
@@ -232,22 +238,23 @@ export async function extractBOQ(
       : pageAnalysis.filter((p) => p.is_structural).map((p) => p.page_number);
   }
 
-  const rows: ExtractedBOQItem[] = rawItems.map((item) => {
+  const initialRows: ExtractedBOQItem[] = rawItems.map((item) => {
     const section = String(item.section || "").trim();
     const length_mm =
       item.length_mm != null && !isNaN(Number(item.length_mm)) ? Number(item.length_mm) : null;
     const quantity =
       item.quantity != null && !isNaN(Number(item.quantity)) ? Number(item.quantity) : null;
+    const member_id = String(item.member_id || "").trim() || "—";
     const unit_weight_kg_m =
       item.unit_weight_kg_m != null && !isNaN(Number(item.unit_weight_kg_m))
         ? Number(item.unit_weight_kg_m)
-        : calculateUnitWeight(section);
+        : calculateUnitWeight(section, member_id, length_mm);
 
     const source_page =
       item.source_page != null && !isNaN(Number(item.source_page)) ? Number(item.source_page) : null;
 
     return {
-      member_id: String(item.member_id || "").trim() || "—",
+      member_id,
       section: section || "—",
       length_mm,
       quantity,
@@ -256,6 +263,20 @@ export async function extractBOQ(
       sheet_no: item.sheet_no ? String(item.sheet_no).trim() : null,
       notes: String(item.notes || "").trim(),
     };
+  });
+
+  // Step: Automatically borrow lengths for any items where length_mm is null
+  const rowsWithLengths = inferMissingLengths(initialRows);
+
+  // Recalculate unit weight for any plate or section that needed length
+  const rows: ExtractedBOQItem[] = rowsWithLengths.map((r) => {
+    if (r.unit_weight_kg_m === null) {
+      const recomputed = calculateUnitWeight(r.section, r.member_id, r.length_mm);
+      if (recomputed !== null) {
+        return { ...r, unit_weight_kg_m: recomputed };
+      }
+    }
+    return r;
   });
 
   return {

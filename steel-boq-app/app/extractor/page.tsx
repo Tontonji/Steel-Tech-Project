@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { extractBOQ, getPDFPageCount, PageAnalysis, ExtractedBOQItem } from "@/lib/extract-client";
+import { calculateUnitWeight, inferMissingLengths } from "@/lib/boq-calc";
 import {
   Upload,
   FileText,
@@ -70,11 +71,11 @@ const DEMO_ROWS: BOQRow[] = [
   { member_id: "GB-01", section: "H-500x200x10x16",  length_mm: 9000, quantity: 2,  unit_weight_kg_m: 100.2, source_page: 4, sheet_no: "S-01", notes: "GRADE BEAM" },
   { member_id: "C1",    section: "H-300x300x10x15",  length_mm: 3600, quantity: 6,  unit_weight_kg_m: 92.4,  source_page: 7, sheet_no: "S-04", notes: "ตารางเสาโครงสร้าง" },
   { member_id: "C2",    section: "H-250x250x9x14",   length_mm: 3600, quantity: 4,  unit_weight_kg_m: 72.4,  source_page: 7, sheet_no: "S-04", notes: "ตารางเสาโครงสร้าง" },
-  { member_id: "CH-1",  section: "[200x80x7.5x11",   length_mm: 3000, quantity: 10, unit_weight_kg_m: null,  source_page: 6, sheet_no: "S-03", notes: "แปหลังคา PURLIN; วงเล็บปิดหาย" },
-  { member_id: "CH-2",  section: "[250x90x9x13",     length_mm: null, quantity: 6,  unit_weight_kg_m: null,  source_page: 6, sheet_no: "S-03", notes: "LENGTH TBC; วงเล็บปิดหาย" },
-  { member_id: "BR-1",  section: "L90x90x7",         length_mm: 4243, quantity: 8,  unit_weight_kg_m: null,  source_page: 6, sheet_no: "S-03", notes: "ค้ำยันหลังคา BRACE" },
+  { member_id: "CH-1",  section: "[200x80x7.5x11",   length_mm: 3000, quantity: 10, unit_weight_kg_m: 24.6,  source_page: 6, sheet_no: "S-03", notes: "แปหลังคา PURLIN" },
+  { member_id: "CH-2",  section: "[250x90x9x13",     length_mm: 3000, quantity: 6,  unit_weight_kg_m: 34.6,  source_page: 6, sheet_no: "S-03", notes: "[ยืมความยาวจาก CH-1 (3,000 mm)]" },
+  { member_id: "BR-1",  section: "L90x90x7",         length_mm: 4243, quantity: 8,  unit_weight_kg_m: 9.5,   source_page: 6, sheet_no: "S-03", notes: "ค้ำยันหลังคา BRACE" },
   { member_id: "P1",    section: "W12x26",            length_mm: 4200, quantity: 3,  unit_weight_kg_m: 38.7,  source_page: 7, sheet_no: "S-04", notes: "IMPERIAL SECTION" },
-  { member_id: "B4",    section: "H-350x175x7x11",   length_mm: null, quantity: 2,  unit_weight_kg_m: 49.9,  source_page: 5, sheet_no: "S-02", notes: "length 'SEE PLAN'" },
+  { member_id: "B4",    section: "H-350x175x7x11",   length_mm: 6000, quantity: 2,  unit_weight_kg_m: 49.9,  source_page: 5, sheet_no: "S-02", notes: "[ยืมความยาวจาก B1 (6,000 mm)]" },
   { member_id: "X1",    section: "H-200x100x5.5x8",  length_mm: 2800, quantity: 1,  unit_weight_kg_m: 21.9,  source_page: 6, sheet_no: "S-03", notes: "แถวตัวอักษรเล็กจางในต้นฉบับ" },
 ];
 
@@ -233,9 +234,19 @@ export default function ExtractorPage() {
         const numCols = ["length_mm", "quantity", "unit_weight_kg_m", "source_page"] as const;
         if ((numCols as readonly string[]).includes(col as any)) {
           const parsed = value === "" || value === "—" ? null : parseFloat(value);
-          return { ...r, [col]: isNaN(parsed as number) ? null : parsed };
+          const updated = { ...r, [col]: isNaN(parsed as number) ? null : parsed };
+          if (col === "length_mm" && updated.unit_weight_kg_m === null) {
+            const rewt = calculateUnitWeight(updated.section, updated.member_id, updated.length_mm);
+            if (rewt !== null) updated.unit_weight_kg_m = rewt;
+          }
+          return updated;
         }
-        return { ...r, [col]: value };
+        const updated = { ...r, [col]: value };
+        if (col === "section") {
+          const rewt = calculateUnitWeight(value, updated.member_id, updated.length_mm);
+          if (rewt !== null) updated.unit_weight_kg_m = rewt;
+        }
+        return updated;
       })
     );
   };
@@ -776,6 +787,24 @@ export default function ExtractorPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      const filled = inferMissingLengths(rows);
+                      const withWeights = filled.map((r) => {
+                        if (r.unit_weight_kg_m === null) {
+                          const rewt = calculateUnitWeight(r.section, r.member_id, r.length_mm);
+                          if (rewt !== null) return { ...r, unit_weight_kg_m: rewt };
+                        }
+                        return r;
+                      });
+                      setRows(withWeights);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/25 transition-all shadow-sm"
+                    title="ยืมความยาวจากชิ้นส่วนที่ใกล้เคียงเพื่อเติมค่า null โดยอัตโนมัติ"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    ยืมความยาวออโต้ (Auto-Borrow Lengths)
+                  </button>
                   {filterPage !== "all" && (
                     <button
                       onClick={() => setFilterPage("all")}

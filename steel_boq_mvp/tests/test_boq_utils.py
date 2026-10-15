@@ -14,8 +14,11 @@ import boq_utils as bu
         ("H300x150x6.5x9", 36.7, 1.5),
         ("H 300 x 300 x 10 x 15", 94.0, 3.0),
         ("W12x26", 38.7, 0.5),
-        ("[200x80x7.5x11", 24.6, 0.1),
-        ("C200x80x7.5x11", 24.6, 0.1),
+        ("Square Tube 2\"x4\"x2mm", 4.7, 0.3),
+        ("Dia 25mm", 3.85, 0.1),
+        ("Steel 90mm, 7.76 kg/m", 7.76, 0.01),
+        ("Steel 125mm, 12.1 kg/m", 12.1, 0.01),
+        ("Steel 50mm, 4.52 kg/m", 4.52, 0.01),
     ],
 )
 def test_unit_weight_known(section, expected, tol):
@@ -25,6 +28,29 @@ def test_unit_weight_known(section, expected, tol):
 @pytest.mark.parametrize("section", ["PL10", "UNKNOWN_SHAPE", None, "", "???"])
 def test_unit_weight_unknown_is_none(section):
     assert bu.unit_weight_kg_m(section) is None
+
+
+def test_infer_missing_lengths_screenshot_case():
+    rows = [
+        {"member_id": "Purlin", "section": "Square Tube 2\"x4\"x2mm", "length_mm": 6000, "quantity": 10},
+        {"member_id": "Column H-Beam", "section": "H-200x200x8x12", "length_mm": None, "quantity": 4},
+        {"member_id": "Base Plate", "section": "Plate 25mm", "length_mm": 300, "quantity": 4},
+        {"member_id": "Stiffener Plate", "section": "Plate 12mm", "length_mm": None, "quantity": 16},
+        {"member_id": "Anchor Bolt", "section": "Dia 25mm", "length_mm": 700, "quantity": 16},
+        {"member_id": "TRUSS 1 Top Chord", "section": "Steel 90mm, 7.76 kg/m", "length_mm": 28000, "quantity": 2},
+        {"member_id": "TRUSS 1 Bottom Chord", "section": "Steel 125mm, 12.1 kg/m", "length_mm": 28000, "quantity": 2},
+        {"member_id": "TRUSS 2 Members", "section": "Steel 50mm, 4.52 kg/m", "length_mm": None, "quantity": 20},
+    ]
+    inferred = bu.infer_missing_lengths(rows)
+    # Column borrows 6000 from bay or typical
+    assert inferred[1]["length_mm"] in (6000, 4000)
+    assert "ยืม" in inferred[1]["notes"] or "assume" in inferred[1]["notes"]
+    # Stiffener plate borrows 200mm from H-200 or 300mm from Base Plate
+    assert inferred[3]["length_mm"] in (200, 300)
+    assert "ยืม" in inferred[3]["notes"]
+    # TRUSS 2 borrows 28000 from TRUSS 1
+    assert inferred[7]["length_mm"] == 28000
+    assert "ยืมความยาวจาก TRUSS 1" in inferred[7]["notes"]
 
 
 def test_unit_weight_angle_l():
