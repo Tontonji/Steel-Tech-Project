@@ -14,6 +14,8 @@ const SECTION_TABLE: Record<string, number> = {
 
 const H_RE = /^(?:H|HN|HW|HM|HP|UB|UC|IPE|HE[ABM]?)\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$/;
 const C_RE = /^(?:\[|C|PFC|U)\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$/;
+const I_RE = /^I\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$/;
+const L_RE = /^(?:L|∠)\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$/;
 const W_RE = /^W\s*(\d+)\s*[xX×]\s*(\d+(?:\.\d+)?)$/;
 
 function norm(section: string): string {
@@ -53,7 +55,28 @@ export function calculateUnitWeight(sectionStr: string | null | undefined): numb
     return Math.round((STEEL_DENSITY_KG_M3 * area_mm2) / 1e5) / 10;
   }
 
-  // 4. Check Imperial Wide Flange W shapes
+  // 4. Check I-Beam shapes
+  const mI = s.match(I_RE);
+  if (mI) {
+    const h = parseFloat(mI[1]);
+    const b = parseFloat(mI[2]);
+    const tw = parseFloat(mI[3]);
+    const tf = parseFloat(mI[4]);
+    const area_mm2 = 2 * b * tf + (h - 2 * tf) * tw;
+    return Math.round((STEEL_DENSITY_KG_M3 * area_mm2) / 1e5) / 10;
+  }
+
+  // 5. Check Angle L shapes (L a x b x t)
+  const mL = s.match(L_RE);
+  if (mL) {
+    const a = parseFloat(mL[1]);
+    const b = parseFloat(mL[2]);
+    const t = parseFloat(mL[3]);
+    const area_mm2 = (a + b - t) * t;
+    return Math.round((STEEL_DENSITY_KG_M3 * area_mm2) / 1e4) / 100;
+  }
+
+  // 6. Check Imperial Wide Flange W shapes
   const mW = s.match(W_RE);
   if (mW) {
     const lb_ft = parseFloat(mW[2]);
@@ -62,3 +85,4 @@ export function calculateUnitWeight(sectionStr: string | null | undefined): numb
 
   return null;
 }
+

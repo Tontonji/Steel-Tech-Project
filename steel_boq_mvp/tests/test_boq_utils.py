@@ -22,9 +22,14 @@ def test_unit_weight_known(section, expected, tol):
     assert bu.unit_weight_kg_m(section) == pytest.approx(expected, abs=tol)
 
 
-@pytest.mark.parametrize("section", ["PL10", "L90x90x7", None, "", "???"])
+@pytest.mark.parametrize("section", ["PL10", "UNKNOWN_SHAPE", None, "", "???"])
 def test_unit_weight_unknown_is_none(section):
     assert bu.unit_weight_kg_m(section) is None
+
+
+def test_unit_weight_angle_l():
+    # L90x90x7: (90+90-7)*7 * 7850 / 1e6 ~ 9.5 kg/m
+    assert bu.unit_weight_kg_m("L90x90x7") == pytest.approx(9.5, abs=0.2)
 
 
 def test_parse_section_h():
@@ -68,7 +73,7 @@ def test_summarize_with_nulls():
 
 
 def test_summarize_weight_none_when_nothing_derivable():
-    df = bu.rows_to_dataframe([{"member_id": "L1", "section": "L90x90x7", "length_mm": 1000, "quantity": 1, "notes": None}])
+    df = bu.rows_to_dataframe([{"member_id": "U1", "section": "UNKNOWN_SHAPE", "length_mm": 1000, "quantity": 1, "notes": None}])
     assert bu.summarize(df)["total_weight_kg"] is None
 
 

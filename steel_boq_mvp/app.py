@@ -11,6 +11,7 @@ import streamlit as st
 import boq_utils as bu
 import gemini_client as gc
 import pdf_utils as pu
+import pricing as pr
 import research_log as rl
 
 LOG_DIR = Path(os.environ.get("BOQ_LOG_DIR") or Path(__file__).resolve().parent / "logs")
@@ -31,7 +32,7 @@ def _thumbnails(pdf_bytes: bytes) -> list[bytes]:
 
 
 def _reset_results():
-    for k in ("extraction", "extraction_error", "raw_response", "boq_df", "log_path", "run_ts"):
+    for k in ("extraction", "extraction_error", "raw_response", "boq_df", "log_path", "run_ts", "prices"):
         st.session_state.pop(k, None)
 
 
@@ -233,6 +234,32 @@ if "extraction" in st.session_state:
     m1.metric("Distinct members", summary["distinct_members"])
     m2.metric("Total quantity", summary["total_quantity"])
     m3.metric("Total weight (kg, where derivable)", "—" if summary["total_weight_kg"] is None else f"{summary['total_weight_kg']:,.0f}")
+
+    if st.button(
+        "Look up steel prices",
+        help="H: OneStockHome list price, else the FY2568 price book. I-beam and lip-C: price book. Others stay unpriced.",
+    ):
+        with st.spinner("Fetching prices..."):
+            st.session_state.prices = pr.lookup_prices(list(df["section"].dropna().astype(str)))
+
+    if st.session_state.get("prices"):
+        df = pr.apply_prices(df, st.session_state.prices)
+        psum = pr.summarize_prices(df)
+        summary = {**summary, **psum}
+        p1, p2, p3 = st.columns(3)
+        p1.metric("Priced rows", psum["priced_rows"])
+        p2.metric("Unpriced rows", psum["unpriced_rows"])
+        total_label = "Total (THB)" if psum["price_complete"] else "Partial total (THB, unpriced rows excluded)"
+        p3.metric(total_label, "—" if psum["total_amount_thb"] is None else f"{psum['total_amount_thb']:,.0f}")
+        st.dataframe(
+            df[["member_id", "section", "price_per_kg", "unit_price_thb_m", "amount_thb", "price_status", "price_source", "price_as_of", "price_note"]],
+            width="stretch",
+        )
+        st.caption(
+            f"Sources: {pr.SOURCE_NAME} (current) and {pr.BOOK_SOURCE} (fallback, older). "
+            "Not a quotation; confirm before ordering. "
+            "Rows without a price are left blank, never estimated."
+        )
 
     fname = bu.build_filename(st.session_state.file_name, st.session_state.get("run_ts"))
     st.download_button(

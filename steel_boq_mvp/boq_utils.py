@@ -28,6 +28,12 @@ _C_RE = re.compile(
     r"^(?:\[|C|PFC|U)\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$"
 )
 _W_RE = re.compile(r"^W\s*(\d+)\s*[xX×]\s*(\d+(?:\.\d+)?)$")
+_I_RE = re.compile(
+    r"^I\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$"
+)
+_L_RE = re.compile(
+    r"^(?:L|∠)\s*-?\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)\s*[xX×]\s*(\d+(?:\.\d+)?)$"
+)
 
 
 def _norm(section: str) -> str:
@@ -49,6 +55,14 @@ def parse_section(section: str | None) -> dict | None:
     m = _W_RE.match(s)
     if m:
         return {"type": "W", "depth_in": float(m.group(1)), "lb_ft": float(m.group(2))}
+    m = _I_RE.match(s)
+    if m:
+        h, b, tw, tf = (float(x) for x in m.groups())
+        return {"type": "I", "h": h, "b": b, "tw": tw, "tf": tf}
+    m = _L_RE.match(s)
+    if m:
+        a, b, t = (float(x) for x in m.groups())
+        return {"type": "L", "a": a, "b": b, "t": t}
     return None
 
 
@@ -68,8 +82,11 @@ def unit_weight_kg_m(section: str | None) -> float | None:
         if key in SECTION_TABLE:
             return SECTION_TABLE[key]
         return _flanged_weight(parsed["h"], parsed["b"], parsed["tw"], parsed["tf"])
-    if parsed["type"] == "H":
+    if parsed["type"] in ("H", "I"):
         return _flanged_weight(parsed["h"], parsed["b"], parsed["tw"], parsed["tf"])
+    if parsed["type"] == "L":
+        # Leg area (a + b - t) * t, ignoring root/toe radii (~1-3 % low).
+        return round(STEEL_DENSITY_KG_M3 * (parsed["a"] + parsed["b"] - parsed["t"]) * parsed["t"] / 1e6, 2)
     if parsed["type"] == "W":
         return round(parsed["lb_ft"] * LB_FT_TO_KG_M, 1)
     return None
