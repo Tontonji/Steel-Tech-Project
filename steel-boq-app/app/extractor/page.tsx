@@ -26,9 +26,14 @@ import {
   Layers,
   CheckSquare,
   Square,
+  Database,
+  Save,
+  FolderOpen,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/ui/navbar";
+import { saveBOQProject, fetchBOQProjects, fetchBOQProjectDetail } from "@/lib/boq-service";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 // ─── Types ───────────────────────────────────────────────
 export interface BOQRow {
@@ -123,6 +128,13 @@ export default function ExtractorPage() {
   const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null);
   const [filterPage, setFilterPage] = useState<number | "all">("all");
 
+  // Supabase save & history state
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [savedProjects, setSavedProjects] = useState<any[]>([]);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
   // Gemini API Key state
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
@@ -133,6 +145,79 @@ export default function ExtractorPage() {
     const saved = localStorage.getItem("gemini_api_key");
     if (saved) setApiKey(saved);
   }, []);
+
+  const handleOpenHistory = async () => {
+    setShowHistoryModal(true);
+    setIsLoadingHistory(true);
+    try {
+      const list = await fetchBOQProjects();
+      setSavedProjects(list);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const handleLoadProject = async (projId: string) => {
+    try {
+      setIsLoadingHistory(true);
+      const detail = await fetchBOQProjectDetail(projId);
+      if (detail) {
+        setRows(
+          detail.items.map((it: any) => ({
+            member_id: it.member_id || "—",
+            section: it.section,
+            length_mm: it.length_mm,
+            quantity: it.quantity,
+            unit_weight_kg_m: it.unit_weight_kg_m,
+            source_page: it.source_page,
+            sheet_no: it.sheet_no,
+            notes: it.notes || "",
+          }))
+        );
+        setResult({
+          latency_s: 0,
+          log_file: "supabase_loaded",
+          model: "supabase",
+          pages: detail.project.structural_pages || [],
+          dpi: 220,
+          rows: detail.items,
+          page_analysis: detail.pages,
+          structural_pages: detail.project.structural_pages || [],
+        });
+        setStatus("done");
+        setShowHistoryModal(false);
+      }
+    } catch (err: any) {
+      alert("ไม่สามารถโหลดโปรเจกต์ได้: " + err.message);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const handleSaveToSupabase = async () => {
+    if (!rows.length) return;
+    setIsSaving(true);
+    setSaveSuccessMsg(null);
+    try {
+      const projName = file?.name ? file.name.replace(/\.[^/.]+$/, "") : "แบบโครงสร้างเหล็ก";
+      await saveBOQProject({
+        title: projName,
+        fileName: file?.name,
+        fileSizeBytes: file?.size,
+        items: rows,
+        pageAnalysis: result?.page_analysis,
+        structuralPages: result?.structural_pages,
+      });
+      setSaveSuccessMsg("บันทึกข้อมูลลง Supabase สำเร็จแล้ว!");
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
+    } catch (err: any) {
+      alert(err.message || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleSaveApiKey = (val: string) => {
     setApiKey(val);
@@ -331,15 +416,42 @@ export default function ExtractorPage() {
               </p>
             </div>
 
-            {rows.length > 0 && (
+            <div className="flex items-center gap-3">
               <button
-                onClick={handleDownloadCSV}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                onClick={handleOpenHistory}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white text-sm font-medium transition-all"
+                title="ดูรายการโปรเจกต์ BOQ ที่เคยบันทึกไว้ใน Supabase"
               >
-                <Download className="w-4 h-4" />
-                Export CSV
+                <FolderOpen className="w-4 h-4 text-amber-400" />
+                ประวัติงาน ({savedProjects.length > 0 ? savedProjects.length : "Supabase"})
               </button>
-            )}
+
+              {rows.length > 0 && (
+                <>
+                  <button
+                    onClick={handleSaveToSupabase}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20"
+                    title="บันทึกผลการถอดแบบและรายการเหล็กลงในฐานข้อมูล Supabase"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    {isSaving ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+                  </button>
+
+                  <button
+                    onClick={handleDownloadCSV}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -939,22 +1051,107 @@ export default function ExtractorPage() {
               </div>
             </div>
 
-            {/* Export CTA */}
+            {/* Export & Save CTA */}
             <div className="flex items-center justify-between p-5 rounded-2xl border border-white/8 bg-white/2 flex-wrap gap-4">
               <div>
-                <p className="text-sm font-medium text-white">พร้อม Export BOQ</p>
+                <p className="text-sm font-medium text-white">บันทึกหรือ Export ผลลัพธ์ BOQ</p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  ดาวน์โหลด BOQ ที่ผ่านการตรวจคัดแยกหน้าโครงสร้างแล้วเป็นไฟล์ CSV
+                  สามารถบันทึกรายการเหล็กและผลการวิเคราะห์ลงฐานข้อมูล Supabase หรือดาวน์โหลดเป็น CSV ได้
                 </p>
               </div>
-              <button
-                onClick={handleDownloadCSV}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:-translate-y-0.5"
-              >
-                <Download className="w-4 h-4" />
-                Download CSV
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSaveToSupabase}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-semibold transition-all shadow-lg shadow-emerald-600/20"
+                >
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {isSaving ? "กำลังบันทึก..." : "บันทึกใน Supabase"}
+                </button>
+                <button
+                  onClick={handleDownloadCSV}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 hover:shadow-blue-500/30 hover:-translate-y-0.5"
+                >
+                  <Download className="w-4 h-4" />
+                  Download CSV
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Alert Toast */}
+        {saveSuccessMsg && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/90 text-white text-sm font-medium shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-bottom-5">
+            <CheckCircle2 className="w-5 h-5" />
+            {saveSuccessMsg}
+          </div>
+        )}
+
+        {/* History Modal Dialog */}
+        {showHistoryModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="relative w-full max-w-2xl bg-[#0f141c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                    <FolderOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">ประวัติโปรเจกต์ BOQ</h3>
+                    <p className="text-xs text-gray-400">ข้อมูลทั้งหมดที่บันทึกไว้ในฐานข้อมูล Supabase</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {isLoadingHistory ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3 text-gray-400 text-sm">
+                  <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                  กำลังโหลดข้อมูลจาก Supabase...
+                </div>
+              ) : savedProjects.length === 0 ? (
+                <div className="py-12 text-center text-gray-400 text-sm">
+                  <p>ยังไม่มีประวัติการบันทึกใน Supabase</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    เมื่อทำการถอดแบบเสร็จแล้ว กดปุ่ม "บันทึกข้อมูล" ได้เลย
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
+                  {savedProjects.map((p) => (
+                    <div
+                      key={p.id}
+                      onClick={() => handleLoadProject(p.id)}
+                      className="flex items-center justify-between p-3.5 rounded-xl border border-white/5 bg-white/2 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer group"
+                    >
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold text-white group-hover:text-blue-300">
+                          {p.title}
+                        </div>
+                        <div className="text-xs text-gray-400 flex items-center gap-3">
+                          <span>{p.total_members} รายการ</span>
+                          <span>•</span>
+                          <span className="text-purple-300 font-mono">
+                            {p.total_weight_kg ? `${(p.total_weight_kg / 1000).toFixed(2)} t` : "—"}
+                          </span>
+                          <span>•</span>
+                          <span>{new Date(p.created_at).toLocaleString("th-TH")}</span>
+                        </div>
+                      </div>
+                      <button className="px-3 py-1.5 rounded-lg bg-blue-600/20 text-blue-300 text-xs font-medium border border-blue-500/30 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                        เปิดดู
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
